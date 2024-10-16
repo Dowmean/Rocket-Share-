@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div class="bg-gray-100 min-h-screen">
+    <div class="flex justify-center space-x-4 my-6">
+        <span class="loading loading-spinner text-primary"></span>
+        <span class="loading loading-spinner text-secondary"></span>
+        <span class="loading loading-spinner text-accent"></span>
+        <span class="loading loading-spinner text-neutral"></span>
+        <span class="loading loading-spinner text-info"></span>
+        <span class="loading loading-spinner text-success"></span>
+        <span class="loading loading-spinner text-warning"></span>
+        <span class="loading loading-spinner text-error"></span>
+      </div>
+      
+    <div class="max-w-3xl mx-auto mt-10 bg-white p-6 rounded-lg shadow-md">
+        <!-- ส่วนหัว -->
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                {% comment %} <img src="{{ post.author_profile_image_url }}" alt="รูปโปรไฟล์" class="w-10 h-10 rounded-full"> {% endcomment %}
+                <div>
+                    <h2 class="font-bold text-lg">{{ post.author }}</h2>
+                    <p class="text-sm text-gray-500">{{ post.created_at }}</p>
+                </div>
+            </div>
+            
+            <!-- เมนูตัวเลือกเพิ่มเติม (แสดงเฉพาะถ้าผู้ใช้เป็นเจ้าของโพสต์) -->
+            {% if post.author == request.user %}
+            <div class="relative">
+                <button class="text-gray-500 hover:text-gray-700 focus:outline-none" id="kebab-menu-btn">
+                    &#8942;
+                </button>
+                <div id="kebab-menu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg hidden">
+                    <a href="{% url 'post_edit' post.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">แก้ไข</a>
+                    <a href="{% url 'post_delete' post.id %}" class="block px-4 py-2 text-red-700 hover:bg-gray-100">ลบ</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- เนื้อหาโพสต์ -->
+        <div class="mt-6">
+            <p class="text-lg">{{ post.content }}</p>
+        </div>
+
+        <!-- รูปภาพโพสต์ -->
+        {% if post.image %}
+        <div class="mt-4">
+            <img src="{{ post.image.url }}" alt="รูปภาพโพสต์" class="w-full object-cover rounded-lg">
+        </div>
+        {% else %}
+        <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+            <span class="text-gray-400">ไม่มีรูปภาพ</span>
+        </div>
+        {% endif %}
+
+        <!-- ตำแหน่งที่ตั้ง (ถ้ามี) -->
+        {% if post.location %}
+        <div class="mt-6">
+            <h3 class="font-semibold text-gray-800">ตำแหน่งที่ตั้ง</h3>
+            <div id="map" style="height: 300px;"></div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // เปิด/ปิด เมนูตัวเลือกเพิ่มเติม
+        var kebabMenuButton = document.getElementById('kebab-menu-btn');
+        if (kebabMenuButton) {
+            kebabMenuButton.addEventListener('click', function () {
+                var kebabMenu = document.getElementById('kebab-menu');
+                if (kebabMenu) {
+                    kebabMenu.classList.toggle('hidden');
+                }
+            });
+        }
+    
+        // เริ่มต้นแผนที่ถ้ามีตำแหน่งที่ตั้ง
+        {% if post.location %}
+        var latitude = {{ post.location.latitude|default:0 }};
+        var longitude = {{ post.location.longitude|default:0 }};
+        
+        if (latitude !== 0 && longitude !== 0) {
+            // เริ่มต้นแผนที่ถ้ามี latitude และ longitude ที่ถูกต้อง
+            var map = L.map('map').setView([latitude, longitude], 13);
+    
+            // เพิ่มแผนที่จาก OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+            }).addTo(map);
+    
+            // เพิ่มมาร์กเกอร์สำหรับตำแหน่งที่ตั้ง
+            L.marker([latitude, longitude]).addTo(map)
+                .bindPopup('ตำแหน่งโพสต์')
+                .openPopup();
+        } else {
+            console.log("ไม่มีตำแหน่งที่ถูกต้องสำหรับโพสต์นี้.");
+        }
+        {% endif %}
+    </script>
+</div>
+{% endblock %}

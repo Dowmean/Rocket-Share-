@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div class="bg-gray-100 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4">
+        <!-- กริดแสดงโพสต์ -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+            {% for post in posts %}
+            <a href="{% url 'post_detail' post.id %}" class="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                {% if post.image %}
+                <img src="{{ post.image.url }}" alt="Post Image" class="w-full h-80 object-cover">
+                {% else %}
+                <div class="w-full h-80 bg-gray-200 flex items-center justify-center">
+                    <span class="text-gray-400">No Image</span>
+                </div>
+                {% endif %}
+                <div class="p-4">
+                    <h2 class="text-lg font-semibold text-gray-800">{{ post.author }}</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ post.content|truncatewords:20 }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if not posts %}
+        <p class="text-center text-gray-500 mt-10">ยังไม่มีโพสต์</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

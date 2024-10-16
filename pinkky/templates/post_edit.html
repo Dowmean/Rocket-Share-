@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div class="bg-gray-100 min-h-screen">
+    <div class="max-w-3xl mx-auto mt-10 bg-white p-6 rounded-lg shadow-md">
+        <!-- ส่วนหัว -->
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="{{ post.author_profile_image_url }}" alt="รูปโปรไฟล์" class="w-10 h-10 rounded-full">
+                <div>
+                    <h2 class="font-bold text-lg">{{ post.author }}</h2>
+                    <p class="text-sm text-gray-500">{{ post.created_at }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- แบบฟอร์มสำหรับแก้ไขโพสต์ -->
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- แก้ไขเนื้อหา -->
+            <div class="mt-6">
+                <label for="content" class="block text-sm font-medium text-gray-700">เนื้อหา</label>
+                {{ form.content }}
+            </div>
+
+            <!-- แก้ไขรูปภาพ -->
+            <div class="mt-4">
+                <label for="image" class="block text-sm font-medium text-gray-700">อัพโหลดรูปภาพ</label>
+                <div class="border-dashed border-2 border-gray-300 rounded-lg h-40 flex justify-center items-center cursor-pointer relative">
+                    <input id="imageUpload" type="file" name="image" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*">
+                    <span class="text-gray-400 text-xl">+</span>
+                </div>
+                <!-- แสดงรูปภาพที่มีอยู่ -->
+                {% if post.image %}
+                <div id="imagePreview" class="mt-4">
+                    <img id="previewImage" class="w-full h-auto rounded-lg" src="{{ post.image.url }}" alt="รูปภาพที่อัพโหลด">
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- แก้ไขตำแหน่งบนแผนที่ -->
+            <div class="mt-6">
+                <h3 class="font-semibold text-gray-800">ตำแหน่ง</h3>
+                <div id="map" class="rounded-lg" style="height: 300px;"></div>
+                <input type="hidden" id="latitude" name="latitude" value="{{ post.location.latitude }}">
+                <input type="hidden" id="longitude" name="longitude" value="{{ post.location.longitude }}">
+            </div>
+
+            <!-- ปุ่มบันทึก -->
+            <div class="mt-6 text-right">
+                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg shadow hover:bg-green-600 focus:outline-none">
+                    บันทึก
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // เริ่มต้นแผนที่ด้วยตำแหน่งปัจจุบันของโพสต์หรือตั้งค่าเริ่มต้นเป็นกรุงเทพฯ
+        var defaultLatLng = [{{ post.location.latitude }}, {{ post.location.longitude }}];
+        var map = L.map('map').setView(defaultLatLng, 13);
+
+        // เพิ่มชั้นแผนที่ OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+        }).addTo(map);
+
+        // เริ่มต้นมาร์กเกอร์
+        var marker = L.marker(defaultLatLng, {
+            draggable: true
+        }).addTo(map);
+
+        // อัปเดตฟิลด์ซ่อนเมื่อลากมาร์กเกอร์
+        marker.on('dragend', function (e) {
+            var latLng = e.target.getLatLng();
+            document.getElementById('latitude').value = latLng.lat;
+            document.getElementById('longitude').value = latLng.lng;
+        });
+
+        // อัปเดตตำแหน่งมาร์กเกอร์เมื่อคลิกบนแผนที่
+        map.on('click', function (e) {
+            var latLng = e.latlng;
+            marker.setLatLng(latLng);  // ย้ายมาร์กเกอร์ไปยังตำแหน่งที่คลิก
+            document.getElementById('latitude').value = latLng.lat;
+            document.getElementById('longitude').value = latLng.lng;
+        });
+
+        // JavaScript สำหรับแสดงตัวอย่างรูปภาพที่อัพโหลด
+        document.getElementById('imageUpload').onchange = function(event) {
+            const [file] = event.target.files;
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    </script>
+</div>
+{% endblock %}

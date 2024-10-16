@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div class="bg-gray-100 min-h-screen">
+
+    <div class="max-w-4xl mx-auto px-4">
+        <!-- กริดแสดงโพสต์ -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+            {% for post in posts %}
+            <a href="{% url 'post_detail' post.id %}" class="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                {% if post.image %}
+                <img src="{{ post.image.url }}" alt="รูปภาพโพสต์" class="w-full h-80 object-cover">
+                {% else %}
+                <div class="w-full h-80 bg-gray-200 flex items-center justify-center">
+                    <span class="text-gray-400">ไม่มีรูปภาพ</span>
+                </div>
+                {% endif %}
+                <div class="p-4">
+                    <h2 class="text-lg font-semibold text-gray-800">{{ post.author }}</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ post.content|truncatewords:20 }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if not posts %}
+        <p class="text-center text-gray-500 mt-10">ยังไม่มีโพสต์</p>
+        {% endif %}
+    </div>
+
+    <!-- ปุ่มลอยสำหรับสร้างโพสต์ -->
+    <button id="fabButton" class="fab" aria-label="สร้างโพสต์" title="สร้างโพสต์">
+        <i class="fas fa-plus" aria-hidden="true"></i>
+    </button>
+
+    <!-- Modal สำหรับสร้างโพสต์ -->
+    <div id="postModal" class="modal hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg max-w-lg w-full p-6 overflow-y-auto max-h-full">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold">สร้างโพสต์</h2>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-700">&times;</button>
+            </div>
+
+            <!-- อัพโหลดรูปภาพและฟอร์มโพสต์ -->
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="border-dashed border-2 border-gray-300 rounded-lg h-40 flex justify-center items-center cursor-pointer relative">
+                    <input id="imageUpload" type="file" name="image" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*">
+                    <span class="text-gray-400 text-xl">+</span>
+                </div>
+                <div id="imagePreview" class="mt-4 hidden">
+                    <img id="previewImage" class="w-full h-auto rounded-lg" src="#" alt="Uploaded Image">
+                </div>
+
+                <div class="mt-4">
+                    {{ form.content }}
+                </div>
+
+                <!-- ปุ่มเลือกตำแหน่งที่ตั้ง -->
+                <div class="mt-4 text-center underline">
+                    <button type="button" id="openMapModal" class="text-[#000] hover:text-[#000]">
+                        <i class="fas fa-map-marker-alt text-red-500"></i>
+                        เลือกตำแหน่งที่ตั้ง
+                    </button>
+                </div>
+
+                <!-- พรีวิวตำแหน่งที่ตั้ง -->
+                <div id="mapPreview" class="mt-4 hidden">
+                    <h3 class="text-lg font-semibold">พรีวิวตำแหน่งที่ตั้ง</h3>
+                    <div id="previewMap" style="height: 200px;"></div>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <button type="submit" class="text-white px-6 py-2 rounded-lg shadow focus:outline-none focus:ring-2" style="background-color: rgb(250, 44, 84);">
+                        โพสต์
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal สำหรับเลือกตำแหน่งที่ตั้ง -->
+    <div id="mapModal" class="modal hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg max-w-lg w-full p-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold">เลือกตำแหน่งที่ตั้ง</h2>
+                <button id="closeMapModal" class="text-gray-500 hover:text-gray-700">&times;</button>
+            </div>
+            <!-- แผนที่ -->
+            <div id="map" style="height: 300px;"></div>
+            <div class="mt-4 text-center">
+                <button id="saveLocation" class="bg-green-500 text-white px-4 py-2 rounded-lg">บันทึกตำแหน่งที่ตั้ง</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSS สำหรับ Floating Action Button (FAB) -->
+<style>
+    .fab {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #fa2c54;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 1000;
+        text-decoration: none;
+    }
+
+    .fab:hover {
+        background-color: #e22748;
+    }
+
+    .modal {
+        display: none;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal .overflow-y-auto {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+</style>
+
+<!-- JavaScript สำหรับจัดการ modal และแผนที่ -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const fabButton = document.getElementById('fabButton');
+        const postModal = document.getElementById('postModal');
+        const closeModal = document.getElementById('closeModal');
+        const mapModal = document.getElementById('mapModal');
+        const openMapModal = document.getElementById('openMapModal');
+        const closeMapModal = document.getElementById('closeMapModal');
+        const saveLocationButton = document.getElementById('saveLocation');
+        let selectedLocation = null;
+        let map = null;
+
+        // แสดง modal สำหรับโพสต์
+        fabButton.addEventListener('click', () => {
+            postModal.classList.add('active');
+            postModal.classList.remove('hidden');
+        });
+
+        // ปิด modal สำหรับโพสต์
+        closeModal.addEventListener('click', () => {
+            postModal.classList.remove('active');
+            postModal.classList.add('hidden');
+        });
+
+        // ฟังก์ชันสำหรับเริ่มต้นแผนที่ด้วยตำแหน่งของผู้ใช้หรือค่าดีฟอลต์
+        const initMap = (defaultLatLng) => {
+            map = L.map('map').setView(defaultLatLng, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+            }).addTo(map);
+
+            // เพิ่มการคลิกเพื่อเลือกตำแหน่ง
+            map.on('click', function(e) {
+                if (selectedLocation) {
+                    map.removeLayer(selectedLocation);
+                }
+                selectedLocation = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+                selectedLocation.bindPopup('ตำแหน่งที่เลือก').openPopup();
+            });
+        };
+
+        // แสดง modal สำหรับแผนที่และเริ่มต้นแผนที่
+        openMapModal.addEventListener('click', () => {
+            mapModal.classList.add('active');
+            mapModal.classList.remove('hidden');
+
+            // ตรวจสอบว่าเบราว์เซอร์รองรับ Geolocation API หรือไม่
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const userLatLng = [position.coords.latitude, position.coords.longitude];
+                        initMap(userLatLng);
+                        selectedLocation = L.marker(userLatLng).addTo(map);
+                        selectedLocation.bindPopup('ตำแหน่งที่เลือก').openPopup();
+                    },
+                    function(error) {
+                        console.warn(`การระบุตำแหน่งล้มเหลว: ${error.message}. ใช้ตำแหน่งดีฟอลต์.`);
+                        initMap([13.736717, 100.523186]);  // ตำแหน่งดีฟอลต์ (กรุงเทพฯ)
+                    }
+                );
+            } else {
+                // หากไม่รองรับ Geolocation ใช้ตำแหน่งดีฟอลต์
+                initMap([13.736717, 100.523186]);  // ตำแหน่งดีฟอลต์ (กรุงเทพฯ)
+            }
+        });
+
+        // ปิด modal สำหรับแผนที่
+        closeMapModal.addEventListener('click', () => {
+            mapModal.classList.remove('active');
+            mapModal.classList.add('hidden');
+        });
+
+        // บันทึกตำแหน่งที่ตั้งและแสดงพรีวิวแผนที่
+        saveLocationButton.addEventListener('click', function() {
+            if (selectedLocation) {
+                const latLng = selectedLocation.getLatLng();
+
+                // ส่งค่า latitude และ longitude ไปยัง backend ผ่าน AJAX
+                fetch("{% url 'save-location' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: `latitude=${latLng.lat}&longitude=${latLng.lng}`,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('บันทึกตำแหน่ง: ' + latLng.lat + ', ' + latLng.lng);
+                        mapModal.classList.remove('active');
+                        mapModal.classList.add('hidden');
+
+                        // แสดงพรีวิวแผนที่ในฟอร์มสร้างโพสต์
+                        const mapPreviewContainer = document.getElementById('mapPreview');
+                        if (mapPreviewContainer) {
+                            mapPreviewContainer.classList.remove('hidden');
+
+                            // เริ่มต้นพรีวิวแผนที่ขนาดเล็ก
+                            const previewMap = L.map('previewMap').setView([latLng.lat, latLng.lng], 13);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 18,
+                            }).addTo(previewMap);
+                            L.marker([latLng.lat, latLng.lng]).addTo(previewMap)
+                                .bindPopup('ตำแหน่งที่เลือก').openPopup();
+                        }
+                    } else {
+                        alert('การบันทึกตำแหน่งล้มเหลว กรุณาลองอีกครั้ง.');
+                    }
+                })
+                .catch(error => {
+                    console.error('เกิดข้อผิดพลาดในการบันทึกตำแหน่ง:', error);
+                    alert('เกิดข้อผิดพลาด กรุณาลองอีกครั้ง.');
+                });
+            } else {
+                alert('กรุณาเลือกตำแหน่งบนแผนที่.');
+            }
+        });
+
+        // JavaScript สำหรับพรีวิวรูปภาพที่อัปโหลด
+        document.getElementById('imageUpload').onchange = function(event) {
+            const [file] = event.target.files;
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    });
+</script>
+
+{% endblock %}

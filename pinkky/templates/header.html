@@ -1,0 +1,87 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oleo+Script:wght@400;700&family=Lobster+Two&display=swap" rel="stylesheet">
+
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
+<header class="bg-white text-blue-500 py-4">
+  <nav class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+    <!-- ซ้าย: ไอคอนหน้าแรก -->
+    <h1 class="text-3xl font-bold tinder-gradient-text" style="font-family: 'Lobster Two', cursive;">Rocket Share</h1>
+
+    <style>
+      .tinder-gradient-text {
+        background: linear-gradient(90deg, #fe8c00, #f83600, #ff416c, #ff4b2b);
+        -webkit-background-clip: text;
+        color: transparent;
+      }
+    </style>
+
+    <!-- ขวา: ลิงก์เข้าสู่ระบบ/ลงทะเบียน หรือ โปรไฟล์ผู้ใช้พร้อมเมนูแบบเลื่อนลง -->
+    <ul class="menu bg-base-200 rounded-box flex space-x-4">
+      {% if user.is_authenticated %}
+        <!-- ถ้าผู้ใช้เข้าสู่ระบบแล้ว แสดงโปรไฟล์ผู้ใช้พร้อมเมนูแบบเลื่อนลง -->
+        <li class="relative">
+          <button id="profile-btn" class="text-gray-800 hover:text-blue-700 flex items-center space-x-2 focus:outline-none">
+            <i class="fas fa-user-circle"></i> <!-- ไอคอนโปรไฟล์ -->
+            <span>{{ user.username }}</span> <!-- แสดงชื่อผู้ใช้ -->
+          </button>
+
+          <!-- เมนูแบบเลื่อนลง -->
+          <ul id="dropdown-menu" class="absolute hidden right-[-100px]  mt-22 w-48 bg-white shadow-lg rounded-lg"> <!-- ปรับตำแหน่งทางขวา -->
+            <li>
+              <a href="{% url 'post_list_user' %}" class="block px-4 py-2 text-gray-700 hover:bg-blue-100 hover:text-blue-700">
+                <i class="fas fa-user"></i> โพสต์ของคุณ
+              </a>
+            </li>
+            <li>
+              <form method="POST" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-100 hover:text-blue-700">
+                  <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </button>
+              </form>
+            </li>
+          </ul>
+        </li>
+      {% else %}
+        <!-- ถ้าผู้ใช้ยังไม่ได้เข้าสู่ระบบ แสดงปุ่มเข้าสู่ระบบและลงทะเบียน -->
+        <li>
+          <a href="{% url 'login' %}" class="hover:text-blue-700 flex items-center space-x-2">
+            <i class="fas fa-sign-in-alt"></i> <!-- ไอคอนเข้าสู่ระบบ -->
+            <span>เข้าสู่ระบบ</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'register' %}" class="hover:text-blue-700 flex items-center space-x-2">
+            <i class="fas fa-user-plus"></i> <!-- ไอคอนลงทะเบียน -->
+            <span>ลงทะเบียน</span>
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+</header>
+
+<!-- JavaScript สำหรับเมนูแบบเลื่อนลง -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const profileBtn = document.getElementById('profile-btn');
+    const dropdownMenu = document.getElementById('dropdown-menu');
+
+    // เปิด/ปิดเมนูเมื่อคลิกปุ่ม
+    profileBtn.addEventListener('click', function(e) {
+      e.stopPropagation(); // ป้องกันเหตุการณ์จากการเลื่อนขึ้นไปที่ document
+      dropdownMenu.classList.toggle('hidden');
+    });
+
+    // ปิดเมนูเมื่อคลิกนอกเมนู
+    document.addEventListener('click', function(e) {
+      if (!dropdownMenu.contains(e.target) && !profileBtn.contains(e.target)) {
+        dropdownMenu.classList.add('hidden');
+      }
+    });
+  });
+</script>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pin Location</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Select a Location</h1>
+    <div id="map"></div>
+
+    <form method="POST" action="{% url 'save-location' %}">
+        {% csrf_token %}
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+        <button type="submit" class="bg-blue-500 text-white px-6 py-2 mt-4 rounded-lg">
+            Save Location
+        </button>
+    </form>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map with a default location (Bangkok)
+        var defaultLocation = [13.736717, 100.523186];
+        var map = L.map('map').setView(defaultLocation, 8);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+        }).addTo(map);
+
+        var marker;
+
+        // Try to get the user's current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var userLocation = [position.coords.latitude, position.coords.longitude];
+                    map.setView(userLocation, 13); // Center the map on the user's location and zoom in
+
+                    // Add marker at user's location
+                    marker = L.marker(userLocation).addTo(map);
+
+                    // Set latitude and longitude in the hidden fields
+                    document.getElementById('latitude').value = position.coords.latitude;
+                    document.getElementById('longitude').value = position.coords.longitude;
+                },
+                function() {
+                    console.warn("Geolocation permission denied. Using default location.");
+                }
+            );
+        } else {
+            console.warn("Geolocation is not supported by this browser.");
+        }
+
+        // On map click, move marker and update latitude/longitude fields
+        map.on('click', function(e) {
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng).addTo(map);
+            }
+
+            // Set latitude and longitude in hidden fields
+            document.getElementById('latitude').value = e.latlng.lat;
+            document.getElementById('longitude').value = e.latlng.lng;
+        });
+    </script>
+</body>
+</html>
